@@ -889,22 +889,22 @@ Section "Install"
 
     WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "InstallDir" "$INSTDIR"
     WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "Version" "${VERSION}"
-    WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${PREFIX_NAME}\${EXE_NAME}"
+    WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\Library\bin\${EXE_NAME}"
 
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "DisplayName" "$(^Name)"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
-        "UninstallString" "$INSTDIR\uninstall.exe"
+        "UninstallString" "$INSTDIR\Uninstall-${NAME}.exe"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "DisplayIcon" "$INSTDIR\resources\app.ico"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
-        "DisplayVersion" "${PRODUCT_VERSION}"
+        "DisplayVersion" "${VERSION}"
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "NoModify" 1
     WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
         "NoRepair" 1
-    WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
-        "EstimatedSize" ${INSTALLSIZE}
+    # WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+    #    "EstimatedSize" ${INSTALLSIZE}
 
 
     WriteUninstaller "$INSTDIR\Uninstall-${NAME}.exe"
