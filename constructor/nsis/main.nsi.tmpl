@@ -908,6 +908,11 @@ Section "Install"
 
 
     WriteUninstaller "$INSTDIR\Uninstall-${NAME}.exe"
+
+    ## cleanup pkgs
+    Delete "$\INSTDIR\pkgs\*.*"
+    RMDir /r "$\INSTDIR\pkgs\"
+
 SectionEnd
 
 Section "Uninstall"
