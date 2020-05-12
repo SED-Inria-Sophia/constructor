@@ -828,8 +828,8 @@ Section "Install"
     push 'Failed to create menus'
     call AbortRetryNSExecWait
     */
-    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\resources\app.ico"
-    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\resources\app.ico"
+    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\Menu\app.ico"
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\Menu\app.ico"
 
 
     push '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" mkdirs'
