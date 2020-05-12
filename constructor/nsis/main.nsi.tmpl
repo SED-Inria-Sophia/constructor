@@ -32,8 +32,14 @@ Unicode "true"
 !define POST_INSTALL_DESC __POST_INSTALL_DESC__
 !define PRODUCT_NAME "${NAME} ${VERSION} (${ARCH})"
 !define UNINSTALL_NAME "@UNINSTALL_NAME@"
-!define UNINSTREG "SOFTWARE\Microsoft\Windows\CurrentVersion\
-                   \Uninstall\${UNINSTALL_NAME}"
+!define UNINSTREG "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_NAME}"
+
+!define PRODUCT_DIR_REGKEY "Software\${COMPANY}\${PRODUCT_NAME}"
+!define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
+!define PRODUCT_UNINST_ROOT_KEY "HKCU"
+!define MUI_LANGDLL_REGISTRY_ROOT "HKCU"
+!define EXE_NAME "${NAME}.exe" 
+# WARNING: I'M MAKING A HUGE ASSUMPTION THAT MY EXE IS CALLED NAME.EXE
 
 var /global INSTDIR_JUSTME
 
@@ -383,8 +389,8 @@ Function .onInit
     ${IfNot} ${RunningX64}
         MessageBox MB_OK|MB_ICONEXCLAMATION \
             "This installer is for a 64-bit version for @NAME@$\n\
-            but your system is 32-bit. Please use the 32-bit Windows$\n\
-            @NAME@ installer."
+            but your system is 32-bit. @NAME@ does not support$\n\
+            32-bit Windows."
         Abort
     ${EndIf}
 #endif
@@ -805,7 +811,9 @@ Section "Install"
     # Cleanup
     Delete "$INSTDIR\pkgs\env.txt"
 
+    /*
     @WRITE_CONDARC@
+    */
 
     AddSize @SIZE@
 
@@ -815,14 +823,20 @@ Section "Install"
     File __CONDA_HISTORY__
 
     DetailPrint "Creating @NAME@ menus..."
+    /*
     push '"$INSTDIR\_conda.exe" constructor --prefix "$INSTDIR" --make-menus @MENU_PKGS@'
     push 'Failed to create menus'
     call AbortRetryNSExecWait
+    */
+    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\resources\app.ico"
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\Library\bin\${EXE_NAME}" "" "$INSTDIR\resources\app.ico"
+
 
     push '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" mkdirs'
     push 'Failed to initialize Anaconda directories'
     call AbortRetryExecWait
 
+/*
     ${If} $Ana_NoScripts_State = ${BST_UNCHECKED}
         DetailPrint "Running post install..."
         push '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" post_install'
@@ -835,8 +849,9 @@ Section "Install"
         push 'Failed to add @NAME@ to the system PATH'
         call AbortRetryExecWait
     ${EndIf}
+*/
 
-
+/*
     # Create registry entries saying this is the system Python
     # (for this version)
     !define PYREG "Software\Python\PythonCore\${PY_VER}"
@@ -870,6 +885,27 @@ Section "Install"
         WriteRegDWORD SHCTX "${UNINSTREG}" "NoModify" 1
         WriteRegDWORD SHCTX "${UNINSTREG}" "NoRepair" 1
     ${EndIf}
+*/
+
+    WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "InstallDir" "$INSTDIR"
+    WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "Version" "${VERSION}"
+    WriteRegStr HKCU "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${PREFIX_NAME}\${EXE_NAME}"
+
+    WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "DisplayName" "$(^Name)"
+    WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "UninstallString" "$INSTDIR\uninstall.exe"
+    WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "DisplayIcon" "$INSTDIR\resources\app.ico"
+    WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "DisplayVersion" "${PRODUCT_VERSION}"
+    WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "NoModify" 1
+    WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "NoRepair" 1
+    WriteRegDWORD ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" \
+        "EstimatedSize" ${INSTALLSIZE}
+
 
     WriteUninstaller "$INSTDIR\Uninstall-${NAME}.exe"
 SectionEnd
@@ -878,7 +914,12 @@ Section "Uninstall"
     # Remove menu items, path entries
 
     DetailPrint "Deleting @NAME@ menus..."
+    /*
     nsExec::ExecToLog '"$INSTDIR\_conda.exe" constructor --prefix "$INSTDIR" --rm-menus'
+    */
+    Delete "$SMPROGRAMS\${PRODUCT_NAME}.lnk"
+    Delete "$DESKTOP\${PRODUCT_NAME}.lnk"
+
 
     # ensure that MSVC runtime DLLs are on PATH during uninstallation
     ReadEnvStr $0 PATH
@@ -891,13 +932,19 @@ Section "Uninstall"
     System::Call 'kernel32::SetEnvironmentVariable(t,t)i("CONDA_DLL_SEARCH_MODIFICATION_ENABLE", "1").r0'
 
     ExecWait '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" pre_uninstall'
+    /*
     ExecWait '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" rmpath'
     ExecWait '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" rmreg'
+    */
+    # Remove uninstaller information from the registry
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+    # Remove product registry key
+    DeleteRegKey HKCU "${PRODUCT_DIR_REGKEY}"
     ExecWait '"$INSTDIR\pythonw.exe" -E -s "$INSTDIR\Lib\_nsis.py" del "$INSTDIR"'
 
     RMDir /r /REBOOTOK "$INSTDIR"
 
-    DeleteRegKey SHCTX "${UNINSTREG}"
+    # DeleteRegKey SHCTX "${UNINSTREG}"
     # If Anaconda was registered as the official Python for this version,
     # remove it from the registry
     ReadRegStr $0 SHCTX "Software\Python\PythonCore\${PY_VER}\InstallPath" ""
